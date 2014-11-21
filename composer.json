@@ -1,0 +1,32 @@
+{
+    "name": "udokmeci/yii2-beanstalk",
+    "type": "library",
+    "description": "Yii2 Beanstalk Client at the top of Paul Annesley's pheanstalk",
+    "keywords": ["beanstalkd","beanstalk client","yii2"],
+    "homepage": "https://github.com/udokmeci/yii2-beanstalk",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Uğur DÖKMECİ",
+            "email": "ugurdokmeci@gmail.com",
+            "homepage": "https://github.com/udokmeci/yii2-beanstalk",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~4.0"
+    },
+    "autoload": {
+        "psr-0" : {
+            "udokmeci\\yii2beanstalk" : "src"
+        }
+    }
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    }
+}
