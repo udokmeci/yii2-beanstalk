@@ -72,7 +72,7 @@ Create an controller under your `commands` folder. Give the name anything you wa
 <?php
 namespace app\commands;
 
-use app\components\BeanstalkController;
+use udokmeci\yii2beanstalk\BeanstalkController;
 use yii\helpers\Console;
 use Yii;
 
