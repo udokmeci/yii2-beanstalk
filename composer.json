@@ -15,7 +15,8 @@
     ],
     "require": {
         "php": ">=5.3.0",
-        "yiisoft/yii2": "*"
+        "yiisoft/yii2": "*",
+        "pda/pheanstalk": "3.*@dev"
     },
     "autoload": {
         "psr-0" : {
