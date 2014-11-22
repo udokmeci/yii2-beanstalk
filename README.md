@@ -2,9 +2,10 @@ yii2-beanstalk
 ==============
 
 Yii2 [beanstalkd][1] web and console component which is an interface on the top of [pda/pheanstalk][2]. Thanks [Paul Annesley][3] for such a complete work. 
-    [1]: http://xph.us/software/beanstalkd/
-    [2]: https://github.com/pda/pheanstalk
-    [3]: http://paul.annesley.cc/
+
+[1]: http://xph.us/software/beanstalkd/
+[2]: https://github.com/pda/pheanstalk
+[3]: http://paul.annesley.cc/
 
 
 How to use?
@@ -35,6 +36,21 @@ Now add following in to your `main` and `console` configuration  under ```compon
             'sleep' => false, // or int for usleep after every job 
         ],
 ```
+
+Now add following in to your `console` configuration only.
+
+``` php
+'params' => $params
+// add you controller with name and class name next to params.
+'controllerMap' => [
+        'worker'=>[
+            'class' => 'app\commands\WorkerController',
+        ]
+       
+    ],
+
+```
+
 ##Producing
 Now if everthing is ok. You run ```beandstalkd```
 and access to controller like 
