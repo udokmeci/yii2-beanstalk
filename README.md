@@ -1,7 +1,11 @@
 yii2-beanstalk
 ==============
 
-Yii2 beanstalk web and console component which is an interface on the top of pda/pheanstalk. Thanks Paul Annesley for such a complete work. 
+Yii2 [beanstalkd][1] web and console component which is an interface on the top of [pda/pheanstalk][2]. Thanks [Paul Annesley][3] for such a complete work. 
+    [1]: http://xph.us/software/beanstalkd/
+    [2]: https://github.com/pda/pheanstalk
+    [3]: http://paul.annesley.cc/
+
 
 How to use?
 ==============
@@ -81,3 +85,10 @@ class WorkerController extends BeanstalkController
 	    }
 	}
 ```
+
+#####Running Worker
+Running console is the easiest. Run ./yii Your ```controller/action```
+``` console
+./yii worker/tube
+```
+Any forks are welcome.
