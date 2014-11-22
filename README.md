@@ -47,6 +47,7 @@ for worker it also has a built in controller which runs an infinite loop and wai
 ###Controller
 Create an controller under your `commands` folder. Give the name anything you want to it and `extend` your controller from `udokmeci\yii2beanstalk\BeanstalkController`
 #####Example
+
 ``` php
 <?php
 namespace app\commands;
@@ -58,7 +59,10 @@ use Yii;
 class WorkerController extends BeanstalkController
 {
 ```
+
 #####Action
+``` php
+<?php
 	public function actionTube($job){
 	    $sentData = $job->getData();
 	    try {
@@ -76,3 +80,4 @@ class WorkerController extends BeanstalkController
             return self::DELETE;
 	    }
 	}
+```
