@@ -109,8 +109,8 @@ class WorkerController extends BeanstalkController
 ```
 
 #####Running Worker
-Running console is the easiest. Run ./yii Your ```controller/action```
+Running console is the easiest. Run ./yii Your ```controller```
 ``` console
-./yii worker/tube
+./yii worker
 ```
 Any forks are welcome.
