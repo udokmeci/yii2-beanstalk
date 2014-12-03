@@ -80,7 +80,7 @@ class WorkerController extends BeanstalkController
 {
   
   public function listenTubes(){
-    return ["tube1","tube2"];
+    return ["tube"];
   }
 
 }
