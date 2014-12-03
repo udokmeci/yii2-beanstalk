@@ -22,7 +22,7 @@ class BeanstalkController extends Controller {
 	}
 
 	public function getTubes() {
-		return array_merge(\Yii::$app->beanstalk->listTubes(), $this->listenTubes());
+		return array_unique(array_merge(\Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
 	}
 
 	public function actionIndex() {
@@ -56,7 +56,7 @@ class BeanstalkController extends Controller {
 
 				while (true) {
 					try {
-						
+
 						$job = $bean->reserve();
 						$methodName = $this->getTubeAction($bean->statsJob($job));
 
