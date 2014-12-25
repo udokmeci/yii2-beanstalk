@@ -10,6 +10,7 @@ class BeanstalkController extends Controller {
 	const DELAY = "delay";
 	const DELAY_PIRORITY = "1000";
 	const DELAY_TIME = 5;
+	private $lasttimereconnect=null;
 	private $tubeActions = [];
 
 	public function listenTubes() {
@@ -56,6 +57,16 @@ class BeanstalkController extends Controller {
 
 				while (true) {
 					try {
+						if($this->lasttimereconnect==null){
+				            $this->lasttimereconnect=time();
+				        }
+
+				        if(time()-$this->lasttimereconnect > 60*60){
+				            Yii::$app->db->close();
+				            Yii::$app->db->open();
+				            Yii::info("Reconnecting to the DB");
+				            $this->lasttimereconnect=time();
+				        }
 
 						$job = $bean->reserve();
 						$methodName = $this->getTubeAction($bean->statsJob($job));
