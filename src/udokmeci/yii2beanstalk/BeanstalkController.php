@@ -23,7 +23,7 @@ class BeanstalkController extends Controller {
 	}
 
 	public function getTubes() {
-		return array_unique(array_merge(\Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
+		return array_unique(array_merge((array)\Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
 	}
 
 	public function actionIndex() {
@@ -58,15 +58,15 @@ class BeanstalkController extends Controller {
 				while (true) {
 					try {
 						if($this->lasttimereconnect==null){
-				            $this->lasttimereconnect=time();
-				        }
+							$this->lasttimereconnect=time();
+						}
 
-				        if(time()-$this->lasttimereconnect > 60*60){
-				            Yii::$app->db->close();
-				            Yii::$app->db->open();
-				            Yii::info("Reconnecting to the DB");
-				            $this->lasttimereconnect=time();
-				        }
+						if(time()-$this->lasttimereconnect > 60*60){
+							Yii::$app->db->close();
+							Yii::$app->db->open();
+							Yii::info("Reconnecting to the DB");
+							$this->lasttimereconnect=time();
+						}
 
 						$job = $bean->reserve();
 						$methodName = $this->getTubeAction($bean->statsJob($job));
