@@ -29,7 +29,7 @@ $> composer update
 Now add following in to your `main` and `console` configuration  under ```components``` 
 ``` php
 'beanstalk'=>[
-            'class' => 'udokmeci\yii2beanstalk',
+            'class' => 'udokmeci\yii2beanstalk\Beanstalk',
             'host'=> "127.0.0.1", // default host
             'port'=>11300, //default port
             'connectTimeout'=> 1,
