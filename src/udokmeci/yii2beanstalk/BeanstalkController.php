@@ -6,7 +6,7 @@ use yii\console\Controller;
 use yii\helpers\Console;
 
 class BeanstalkController extends Controller {
-	const DELETE = "bury";
+	const BURY = "bury";
 	const DELETE = "delete";
 	const DELAY = "delay";
 	const DELAY_PIRORITY = "1000";
