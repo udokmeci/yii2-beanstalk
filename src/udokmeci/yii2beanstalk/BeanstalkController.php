@@ -64,6 +64,8 @@ class BeanstalkController extends Controller {
 						if(time()-$this->lasttimereconnect > 60*60){
 							Yii::$app->db->close();
 							Yii::$app->db->open();
+							Yii::$app->db->exec("SET @@session.wait_timeout = 31536000");
+
 							Yii::info("Reconnecting to the DB");
 							$this->lasttimereconnect=time();
 						}
