@@ -101,7 +101,7 @@ class WorkerController extends BeanstalkController
            if($everthingIsAllRight == true){
                 fwrite(STDOUT, Console::ansiFormat("- Everything is allright"."\n", [Console::FG_GREEN]));
                 return self::DELETE; //Deletes the job from beanstalkd
-                // you can also bury jobs if they do not fit in
+                // you can also bury jobs to examine later
                 // self::BURY
                 // self::RELEASE
                 // self::DELAY
