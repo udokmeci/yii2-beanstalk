@@ -6,6 +6,7 @@ use yii\console\Controller;
 use yii\helpers\Console;
 
 class BeanstalkController extends Controller {
+	const DELETE = "bury";
 	const DELETE = "delete";
 	const DELAY = "delay";
 	const DELAY_PIRORITY = "1000";
@@ -91,6 +92,9 @@ class BeanstalkController extends Controller {
 									]
 								)
 							) {
+							case self::BURY:
+								\Yii::$app->beanstalk->delete($job);
+								break;
 							case self::DELETE:
 								\Yii::$app->beanstalk->delete($job);
 								break;
@@ -99,7 +103,7 @@ class BeanstalkController extends Controller {
 								break;
 
 							default:
-								\Yii::$app->beanstalk->release($job);
+								\Yii::$app->beanstalk->bury($job);
 								break;
 						}
 
