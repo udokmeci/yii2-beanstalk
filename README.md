@@ -66,7 +66,7 @@ for worker it also has a built in controller which runs an infinite loop and wai
 
 ###Controller
 Create an controller under your `commands` folder. Give the name anything you want to it and `extend` your controller from `udokmeci\yii2beanstalk\BeanstalkController`
-#####Example
+#####Example Controller
 
 ``` php
 <?php
@@ -86,37 +86,56 @@ class WorkerController extends BeanstalkController
     return ["tube"];
   }
 
-}
-```
-
-#####Action
-``` php
-<?php
-	public function actionTube($job){
+  /**
+    *
+    * @param Pheanstalk\Job $job
+    * @return string  self::BURY
+    *                 self::RELEASE
+    *                 self::DELAY
+    *                 self::DELETE
+    *                 self::NO_ACTION
+    *  
+    */
+  public function actionTube($job){
 	    $sentData = $job->getData();
 	    try {
     	   // something useful here
 
 
+
            if($everthingIsAllRight == true){
                 fwrite(STDOUT, Console::ansiFormat("- Everything is allright"."\n", [Console::FG_GREEN]));
-                return self::DELETE; //Deletes the job from beanstalkd
-                // you can also bury jobs to examine later
-                // self::BURY
-                // self::RELEASE
-                // self::DELAY
-                // self::DELETE
+                //Delete the job from beanstalkd
+                return self::DELETE; 
+                
+                
+               
+
+
+            
 
            }
+
+           if($IwantSomethingCustom==true){
+                Yii::$app->beanstalk->release($job);
+                return self::NO_ACTION
+           }
+
+
            fwrite(STDOUT, Console::ansiFormat("- Not everything is allright!!!"."\n", [Console::FG_GREEN]));
-           return self::DELAY; //Delays the job for later try
+
+           //Delay the job for later try
+           return self::DELAY; 
+
            // if you return anything else job is burried.
 	    } catch (\Exception $e) {
             //If there is anything to do.
             fwrite(STDERR, Console::ansiFormat($e."\n", [Console::FG_RED]));
-            return self::DELETE;
+            // you can also bury jobs to examine later
+            return self::BURY;
 	    }
 	}
+}
 ```
 
 #####Running Worker

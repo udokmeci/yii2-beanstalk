@@ -9,6 +9,8 @@ class BeanstalkController extends Controller {
 	const BURY = "bury";
 	const DELETE = "delete";
 	const DELAY = "delay";
+	const RELEASE = "release";
+	const NO_ACTION = "noAction";
 	const DELAY_PIRORITY = "1000";
 	const DELAY_TIME = 5;
 	private $lasttimereconnect=null;
@@ -92,6 +94,11 @@ class BeanstalkController extends Controller {
 									]
 								)
 							) {
+							case self::NO_ACTION:
+								break;
+							case self::RELEASE:
+								\Yii::$app->beanstalk->release($job);
+								break;
 							case self::BURY:
 								\Yii::$app->beanstalk->delete($job);
 								break;
