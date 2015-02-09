@@ -111,8 +111,10 @@ class BeanstalkController extends Controller {
 								\Yii::$app->beanstalk->delete($job);
 								break;
 							case self::DECAY:
-								if($jobStats->delay>=static::DELAY_MAX)
+								if($jobStats->delay>=static::DELAY_MAX){
 									\Yii::$app->beanstalk->delete($job);
+									fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd','Decaying Job Deleted!') . "\n", [Console::FG_RED]));
+								}
 								else
 									\Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME^($jobStats->delay+1));
 								break;

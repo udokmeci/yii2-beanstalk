@@ -113,25 +113,23 @@ class WorkerController extends BeanstalkController
                 fwrite(STDOUT, Console::ansiFormat("- Everything is allright"."\n", [Console::FG_GREEN]));
                 //Delete the job from beanstalkd
                 return self::DELETE; 
-                
-                
-               
-
-
-            
-
            }
 
-           if($IwantSomethingCustom==true){
+           if($everthingWillBeAllRight == true){
+                fwrite(STDOUT, Console::ansiFormat("- Everything will be allright"."\n", [Console::FG_GREEN]));
+                //Delay the for later try
+                //You may prefer decay to avoid endless loop
+                return self::DELAY; 
+           }
+
+           if($IWantSomethingCustom==true){
                 Yii::$app->beanstalk->release($job);
                 return self::NO_ACTION
            }
 
-
            fwrite(STDOUT, Console::ansiFormat("- Not everything is allright!!!"."\n", [Console::FG_GREEN]));
-
-           //Delay the job for later try
-           return self::DELAY; 
+           //Decay the job to try DELAY_MAX times.
+           return self::DECAY; 
 
            // if you return anything else job is burried.
 	    } catch (\Exception $e) {
