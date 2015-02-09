@@ -78,10 +78,15 @@ use Yii;
 
 class WorkerController extends BeanstalkController
 {
-  //Those are the default values you can override
+  // Those are the default values you can override
+
   const DELAY_PIRORITY = "1000"; //Default priority
   const DELAY_TIME = 5; //Default delay time
-  
+
+  // Used for Decaying. When DELAY_MAX reached job is deleted or delayed with 
+  // DELAY_TIME ^ (delay_count+1)
+  const DELAY_MAX = 3; 
+
   public function listenTubes(){
     return ["tube"];
   }
