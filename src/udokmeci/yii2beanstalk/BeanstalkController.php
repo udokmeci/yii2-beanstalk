@@ -9,10 +9,12 @@ class BeanstalkController extends Controller {
 	const BURY = "bury";
 	const DELETE = "delete";
 	const DELAY = "delay";
+	const DECAY = "decay";
 	const RELEASE = "release";
 	const NO_ACTION = "noAction";
 	const DELAY_PIRORITY = "1000";
 	const DELAY_TIME = 5;
+	const DELAY_MAX = 3;
 	private $lasttimereconnect=null;
 	private $tubeActions = [];
 
@@ -63,8 +65,7 @@ class BeanstalkController extends Controller {
 						if($this->lasttimereconnect==null){
 							$this->lasttimereconnect=time();
 							$command = Yii::$app->db->createCommand('SET @@session.wait_timeout = 31536000');
-							$command->execute();
-							
+							$command->execute();	
 						}
 
 						if(time()-$this->lasttimereconnect > 60*60){
@@ -80,7 +81,8 @@ class BeanstalkController extends Controller {
 						}
 
 						$job = $bean->reserve();
-						$methodName = $this->getTubeAction($bean->statsJob($job));
+						$jobStats=$bean->statsJob($job);
+						$methodName = $this->getTubeAction($jobStats);
 
 						if (!$methodName) {
 							fwrite(STDERR, Console::ansiFormat("No method found for job's tube!" . "\n", [Console::FG_RED]));
@@ -108,11 +110,17 @@ class BeanstalkController extends Controller {
 							case self::BURY:
 								\Yii::$app->beanstalk->delete($job);
 								break;
+							case self::DECAY:
+								if($jobStats->delay>=static::DELAY_MAX)
+									\Yii::$app->beanstalk->delete($job);
+								else
+									\Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME^($jobStats->delay+1));
+								break;
 							case self::DELETE:
 								\Yii::$app->beanstalk->delete($job);
 								break;
 							case self::DELAY:
-								\Yii::$app->beanstalk->release($job, self::DELAY_PIRORITY, self::DELAY_TIME);
+								\Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
 								break;
 
 							default:

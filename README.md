@@ -94,6 +94,7 @@ class WorkerController extends BeanstalkController
     *                 self::DELAY
     *                 self::DELETE
     *                 self::NO_ACTION
+    *                 self::DECAY
     *  
     */
   public function actionTube($job){
