@@ -35,6 +35,24 @@ class BeanstalkController extends Controller {
 
 	}
 
+	public function setDBSessionTimout(){
+		try {
+			$this->mysqlSessionTimeout();
+		} catch (\Exception $e) {
+			Yii::error("DB wait timeout did not succeeded ");
+		}
+		
+	}
+
+	public function mysqlSessionTimeout(){
+		try {
+			$command = Yii::$app->db->createCommand('SET @@session.wait_timeout = 31536000');
+			$command->execute();	
+		} catch (\Exception $e) {
+			Yii::error("Mysql session.wait_timeout command did not succeeded ");
+		}
+	}
+
 	public function beforeAction($action) {
 		if ($action->id == "index") {
 			try {
@@ -64,19 +82,15 @@ class BeanstalkController extends Controller {
 					try {
 						if($this->lasttimereconnect==null){
 							$this->lasttimereconnect=time();
-							$command = Yii::$app->db->createCommand('SET @@session.wait_timeout = 31536000');
-							$command->execute();	
+							$this->setDBSessionTimout();
+								
 						}
 
 						if(time()-$this->lasttimereconnect > 60*60){
 							Yii::$app->db->close();
 							Yii::$app->db->open();
-
-							$command = Yii::$app->db->createCommand('SET @@session.wait_timeout = 31536000');
-							$command->execute();
-							
-
 							Yii::info("Reconnecting to the DB");
+							$this->setDBSessionTimout();
 							$this->lasttimereconnect=time();
 						}
 
