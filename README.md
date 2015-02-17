@@ -124,7 +124,7 @@ class WorkerController extends BeanstalkController
 
            if($IWantSomethingCustom==true){
                 Yii::$app->beanstalk->release($job);
-                return self::NO_ACTION
+                return self::NO_ACTION;
            }
 
            fwrite(STDOUT, Console::ansiFormat("- Not everything is allright!!!"."\n", [Console::FG_GREEN]));
