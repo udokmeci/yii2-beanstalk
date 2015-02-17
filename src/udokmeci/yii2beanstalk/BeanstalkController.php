@@ -85,17 +85,26 @@ class BeanstalkController extends Controller {
 		}
 	}
 
-
-	public function signalHandler(){
+	public function registerSignalHandler(){
 		if (!extension_loaded('pcntl'))
 			return;
-		pcntl_signal(SIGINT, function ($signal) {
-			fwrite(STDOUT, Console::ansiFormat("Exiting\n", [Console::FG_RED]));
-			if (!$this->_inProgress)
-				return Yii::$app->end();
-			$this->_willTerminate = true;
-		});
 		declare(ticks = 1);
+		pcntl_signal(SIGTERM,[$this, 'signalHandler']);
+		pcntl_signal(SIGINT, [$this, 'signalHandler']);
+		return true;
+	}
+
+	public function signalHandler($signal){
+		switch ($signal){
+			case SIGTERM:
+			case SIGINT:
+				fwrite(STDOUT, Console::ansiFormat("Exiting...\n", [Console::FG_RED]));
+				if (!$this->_inProgress)
+					return Yii::$app->end();
+				$this->_willTerminate = true;
+				break;
+			default:
+		}
 	}
 
 	/**
@@ -104,7 +113,7 @@ class BeanstalkController extends Controller {
 	public function beforeAction($action) {
 		if ($action->id == "index") {
 			try {
-				$this->signalHandler();
+				$this->registerSignalHandler();
 				foreach ($this->getTubes() as $key => $tube) {
 					$methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $tube))));
 					if ($this->hasMethod($methodName)) {
