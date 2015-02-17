@@ -104,6 +104,7 @@ class BeanstalkController extends Controller {
 				$this->_willTerminate = true;
 				break;
 			default:
+				break;
 		}
 	}
 
