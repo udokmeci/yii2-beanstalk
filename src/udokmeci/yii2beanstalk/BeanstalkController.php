@@ -85,6 +85,19 @@ class BeanstalkController extends Controller {
 		}
 	}
 
+
+	public function signalHandler(){
+		if (!extension_loaded('pcntl'))
+			return;
+		pcntl_signal(SIGINT, function ($signal) {
+			fwrite(STDOUT, Console::ansiFormat("Exiting\n", [Console::FG_RED]));
+			if (!$this->_inProgress)
+				return Yii::$app->end();
+			$this->_willTerminate = true;
+		});
+		declare(ticks = 1);
+	}
+
 	/**
 	 * @param $action
 	 */
@@ -113,7 +126,7 @@ class BeanstalkController extends Controller {
 					return Yii::$app->end();
 				}
 
-				while (true) {
+				while (!$this->_willTerminate) {
 					try {
 						if ($this->_lasttimereconnect == null) {
 							$this->_lasttimereconnect = time();
@@ -190,20 +203,6 @@ class BeanstalkController extends Controller {
 			}
 			return Yii::$app->end();
 		}
-	}
-	public function signalHandler(){
-		if (!extension_loaded('pcntl'))
-			return;
-		
-		pcntl_signal(SIGINT, function ($signal) {
-			fwrite(STDOUT, Console::ansiFormat("Received SIGINT will exit soon\n", [Console::FG_RED]));
-			if ($this->_inProgress) {
-					$this->_willTerminate = true;
-			} else {
-					return Yii::$app->end();
-			}
-		});
-		declare(ticks = 1);
 	}
 
 }
