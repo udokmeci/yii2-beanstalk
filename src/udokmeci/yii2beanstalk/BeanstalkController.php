@@ -15,7 +15,10 @@ class BeanstalkController extends Controller {
 	const DELAY_PIRORITY = "1000";
 	const DELAY_TIME = 5;
 	const DELAY_MAX = 3;
-	private $lasttimereconnect = null;
+
+	private $_lasttimereconnect = null;
+	private $_inProgress = false;
+	private $_willTerminate = false;
 
 	/**
 	 * Collection of tube name and action method name key value pair
@@ -45,7 +48,7 @@ class BeanstalkController extends Controller {
 	 * @return array Collection of tube names.
 	 */
 	public function getTubes() {
-		return array_unique(array_merge((array) \Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
+		return array_unique(array_merge((array) Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
 	}
 	/**
 	 * {@inheritDoc}
@@ -72,21 +75,32 @@ class BeanstalkController extends Controller {
 		}
 	}
 
+	public function decayJob($job){
+		$jobStats = Yii::$app->beanstalk->statsJob($job);
+		if ($jobStats->delay >= static::DELAY_MAX) {
+			Yii::$app->beanstalk->delete($job);
+			fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]));
+		} else {
+			Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME^($jobStats->delay + 1));
+		}
+	}
+
 	/**
 	 * @param $action
 	 */
 	public function beforeAction($action) {
 		if ($action->id == "index") {
 			try {
+				$this->signalHandler();
 				foreach ($this->getTubes() as $key => $tube) {
 					$methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $tube))));
 					if ($this->hasMethod($methodName)) {
 						$this->tubeActions[$tube] = $methodName;
 						fwrite(STDOUT, Console::ansiFormat("Listening $tube tube." . "\n", [Console::FG_GREEN]));
-						$bean = \Yii::$app->beanstalk->watch($tube);
+						$bean = Yii::$app->beanstalk->watch($tube);
 						if (!$bean) {
 							fwrite(STDERR, Console::ansiFormat("Check beanstalkd!" . "\n", [Console::FG_RED]));
-							return \Yii::$app->end();
+							return Yii::$app->end();
 						}
 
 					} else {
@@ -96,23 +110,23 @@ class BeanstalkController extends Controller {
 
 				if (count($this->tubeActions) == 0) {
 					fwrite(STDERR, Console::ansiFormat("No tube found to listen!" . "\n", [Console::FG_RED]));
-					return \Yii::$app->end();
+					return Yii::$app->end();
 				}
 
 				while (true) {
 					try {
-						if ($this->lasttimereconnect == null) {
-							$this->lasttimereconnect = time();
+						if ($this->_lasttimereconnect == null) {
+							$this->_lasttimereconnect = time();
 							$this->setDBSessionTimout();
 
 						}
 
-						if (time() - $this->lasttimereconnect > 60 * 60) {
+						if (time() - $this->_lasttimereconnect > 60 * 60) {
 							Yii::$app->db->close();
 							Yii::$app->db->open();
 							Yii::info("Reconnecting to the DB");
 							$this->setDBSessionTimout();
-							$this->lasttimereconnect = time();
+							$this->_lasttimereconnect = time();
 						}
 
 						$job = $bean->reserve();
@@ -123,7 +137,7 @@ class BeanstalkController extends Controller {
 							fwrite(STDERR, Console::ansiFormat("No method found for job's tube!" . "\n", [Console::FG_RED]));
 							break;
 						}
-
+						$this->_inProgress=true;
 						switch (
 								call_user_func_array(
 									[
@@ -138,45 +152,58 @@ class BeanstalkController extends Controller {
 							case self::NO_ACTION:
 								break;
 							case self::RELEASE:
-								\Yii::$app->beanstalk->release($job);
+								Yii::$app->beanstalk->release($job);
 								break;
 							case self::BURY:
-								\Yii::$app->beanstalk->delete($job);
+								Yii::$app->beanstalk->delete($job);
 								break;
 							case self::DECAY:
-								if ($jobStats->delay >= static::DELAY_MAX) {
-									\Yii::$app->beanstalk->delete($job);
-									fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]));
-								} else {
-									\Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME^($jobStats->delay + 1));
-								}
+								$this->decayJob($job);
 								break;
 							case self::DELETE:
-								\Yii::$app->beanstalk->delete($job);
+								Yii::$app->beanstalk->delete($job);
 								break;
 							case self::DELAY:
-								\Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
+								Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
 								break;
 
 							default:
-								\Yii::$app->beanstalk->bury($job);
+								Yii::$app->beanstalk->bury($job);
 								break;
 						}
 
-					} catch (\yii\base\ErrorException $e) {
+					} catch (Yii\db\Exception $e) {
+						$this->decayJob($job);
+						fwrite(STDERR, Console::ansiFormat($e->getMessage() . "\n", [Console::FG_RED]));
+						fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'DB Error job is decaying.') . "\n", [Console::FG_RED]));
+					} catch (Yii\base\ErrorException $e) {
 						fwrite(STDERR, Console::ansiFormat($e->getMessage() . "\n", [Console::FG_RED]));
 					}
-
-					if (\Yii::$app->beanstalk->sleep) {
-						usleep(\Yii::$app->beanstalk->sleep);
+					$this->_inProgress=false;
+					if (Yii::$app->beanstalk->sleep) {
+						usleep(Yii::$app->beanstalk->sleep);
 					}
 				}
+				
 			} catch (\Pheanstalk\Exception\ServerException $e) {
-
 				fwrite(STDERR, Console::ansiFormat($e . "\n", [Console::FG_RED]));
 			}
-
+			return Yii::$app->end();
 		}
+	}
+	public function signalHandler(){
+		if (!extension_loaded('pcntl'))
+			return;
+		
+		pcntl_signal(SIGINT, function ($signal) {
+			fwrite(STDOUT, Console::ansiFormat("Received SIGINT will exit soon\n", [Console::FG_RED]));
+			if ($this->_inProgress) {
+					$this->_willTerminate = true;
+			} else {
+					return Yii::$app->end();
+			}
+		});
+		declare(ticks = 1);
 	}
 
 }
