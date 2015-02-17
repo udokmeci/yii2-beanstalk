@@ -17,14 +17,14 @@ class BeanstalkController extends Controller {
 	const DELAY_MAX = 3;
 	private $lasttimereconnect = null;
 
-    /**
-     * Collection of tube name and action method name key value pair
-     */
+	/**
+	 * Collection of tube name and action method name key value pair
+	 */
 	private $tubeActions = [];
-    /**
-     * Controller specific tubes to listen if they do not exists.
-     * return array Collection of tube names to listen.
-     */
+	/**
+	 * Controller specific tubes to listen if they do not exists.
+	 * return array Collection of tube names to listen.
+	 */
 	public function listenTubes() {
 		return [];
 	}
@@ -35,21 +35,21 @@ class BeanstalkController extends Controller {
 	 * @return string Method name proper to yii2 matching to tube name
 	 */
 	public function getTubeAction($statsJob)
-    {
+	{
 
 		return isset($this->tubeActions[$statsJob->tube]) ? $this->tubeActions[$statsJob->tube] : false;
 	}
-    /**
-     * Discovers tubes from deamon and merge them with user forced ones.
-     * 
-     * @return array Collection of tube names.
-     */
+	/**
+	 * Discovers tubes from deamon and merge them with user forced ones.
+	 * 
+	 * @return array Collection of tube names.
+	 */
 	public function getTubes() {
 		return array_unique(array_merge((array) \Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
 	}
-    /**
-     * {@inheritDoc}
-     */
+	/**
+	 * {@inheritDoc}
+	 */
 	public function actionIndex() {
 
 	}
