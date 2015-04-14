@@ -145,6 +145,6 @@ class WorkerController extends BeanstalkController
 #####Running Worker
 Running console is the easiest. Run ./yii Your ```controller```
 ``` console
-./yii worker
+php ./yii worker
 ```
 Any forks are welcome.
