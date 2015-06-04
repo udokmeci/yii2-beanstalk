@@ -77,11 +77,12 @@ class BeanstalkController extends Controller {
 
 	public function decayJob($job){
 		$jobStats = Yii::$app->beanstalk->statsJob($job);
-		if ($jobStats->delay >= static::DELAY_MAX) {
+		$delay_job = $jobStats->delay - $jobStats->age;
+		if ($delay_job >= static::DELAY_MAX) {
 			Yii::$app->beanstalk->delete($job);
 			fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]));
 		} else {
-			Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME^($jobStats->delay + 1));
+			Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, $jobStats->delay + self::DELAY_TIME);
 		}
 	}
 
