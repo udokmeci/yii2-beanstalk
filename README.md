@@ -15,6 +15,7 @@ Just add the line under `require` object in your `composer.json` file.
 ``` json
 {
   "require": {
+  ...
     "udokmeci/yii2-beanstalk" : "dev-master"
   }
 }
@@ -26,7 +27,7 @@ $> composer update
 ```
 
 ##Configuration
-Now add following in to your `main` and `console` configuration  under ```components``` 
+Now add following lines in to your `main` and `console` configuration file under ```components``` 
 ``` php
 'beanstalk'=>[
             'class' => 'udokmeci\yii2beanstalk\Beanstalk',
@@ -40,7 +41,8 @@ Now add following in to your `main` and `console` configuration  under ```compon
 Now add following in to your `console` configuration only.
 
 ``` php
-'params' => $params
+...
+'params' => $params,
 // add you controller with name and class name next to params.
 'controllerMap' => [
         'worker'=>[
@@ -52,13 +54,13 @@ Now add following in to your `console` configuration only.
 ```
 
 ##Producing
-Now if everthing is ok. You run ```beandstalkd```
-and access to controller like 
-````` php 
+Now if everthing is fine. You can run ```beandstalkd```
+and access to controller as 
+``` php 
 \Yii::$app->beanstalk
         ->putInTube('tube', $mixedData ,$priority,$delay);
 
-`````
+```
 `$mixedData` is added on v1.0 for complex usage. Anything else then `string` will be send as `json` format. So you can sent anything within it suppoted by `json`.
 
 ##Worker
@@ -84,7 +86,6 @@ class WorkerController extends BeanstalkController
   const DELAY_TIME = 5; //Default delay time
 
   // Used for Decaying. When DELAY_MAX reached job is deleted or delayed with 
-  // DELAY_TIME ^ (delay_count+1)
   const DELAY_MAX = 3; 
 
   public function listenTubes(){
@@ -143,8 +144,10 @@ class WorkerController extends BeanstalkController
 ```
 
 #####Running Worker
-Running console is the easiest. Run ./yii Your ```controller```
+Running console is the easiest part. Run ./yii Your ```controller```
 ``` console
 php ./yii worker
 ```
+Controller will tell you, wheater there are actions for correspanding tubes or beanstalk server is accessible and which tubes are listening currently. The controller handles with signals. So exit whenever you want, reserved job will not be hanged.
+
 Any forks are welcome.
