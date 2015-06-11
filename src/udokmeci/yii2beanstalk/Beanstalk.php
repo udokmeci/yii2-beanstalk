@@ -15,6 +15,17 @@ class Beanstalk extends \yii\base\Component {
 
 		try
 		{
+			if (!isset(Yii::$app->getI18n()->translations['udokmeci.beanstalkd'])) {
+				Yii::$app->getI18n()->translations['udokmeci.beanstalkd'] = [
+					'class' => 'yii\i18n\PhpMessageSource',
+					'basePath' => '@app/messages', // if advanced application, set @frontend/messages
+					'sourceLanguage' => 'en',
+					'fileMap' => [
+						//'main' => 'main.php',
+					],
+				];
+			}
+
 			$this->_beanstalk = new Pheanstalk($this->host, $this->port, $this->connectTimeout);
 			$connected = true;
 		} catch (\Pheanstalk\Exception\ConnectionException $e) {
