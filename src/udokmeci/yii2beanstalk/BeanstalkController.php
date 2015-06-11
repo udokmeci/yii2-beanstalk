@@ -32,6 +32,27 @@ class BeanstalkController extends Controller {
 		return [];
 	}
 
+
+	public function init() {
+
+		try
+		{
+			if (!isset(Yii::$app->getI18n()->translations['udokmeci.beanstalkd'])) {
+				Yii::$app->getI18n()->translations['udokmeci.beanstalkd'] = [
+					'class' => 'yii\i18n\PhpMessageSource',
+					'basePath' => '@app/messages', // if advanced application, set @frontend/messages
+					'sourceLanguage' => 'en',
+					'fileMap' => [
+						//'main' => 'main.php',
+					],
+				];
+			}
+		} catch (\Pheanstalk\Exception\ConnectionException $e) {
+			Yii::error($e);
+		}
+		return parent::init();
+	}
+
 	/**
 	 * Returns the matching action method for the job.
 	 *
