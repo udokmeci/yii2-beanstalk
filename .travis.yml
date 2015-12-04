@@ -1,0 +1,11 @@
+after_script: ['wget https://scrutinizer-ci.com/ocular.phar', 'php ocular.phar code-coverage:upload
+    --format=php-clover coverage.clover']
+before_script: ['curl -L https://github.com/kr/beanstalkd/archive/v1.9.tar.gz | tar
+    xz -C /tmp', cd /tmp/beanstalkd-1.9/, make, ./beanstalkd &, cd $TRAVIS_BUILD_DIR,
+  travis_retry composer self-update, travis_retry composer install --no-interaction
+    --prefer-source --dev]
+install: [composer self-update, 'composer global require "fxp/composer-asset-plugin:~1.1.1"',
+  composer install]
+language: php
+php: [5.5]
+script: [vendor/bin/phpunit --coverage-text --coverage-clover=coverage.clover]
