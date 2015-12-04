@@ -7,5 +7,5 @@ before_script: ['curl -L https://github.com/kr/beanstalkd/archive/v1.9.tar.gz | 
 install: [composer self-update, 'composer global require "fxp/composer-asset-plugin:~1.1.1"',
   composer install]
 language: php
-php: [5.4]
+php: [5.5]
 script: [vendor/bin/phpunit --coverage-text --coverage-clover=coverage.clover]
