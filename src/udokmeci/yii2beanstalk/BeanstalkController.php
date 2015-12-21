@@ -138,7 +138,7 @@ class BeanstalkController extends Controller
     {
         $jobStats = Yii::$app->beanstalk->statsJob($job);
 
-        if ( $jobStats->releases == static::$DELAY_RETRIES) {
+        if ( $jobStats->releases == static::DELAY_RETRIES) {
             Yii::$app->beanstalk->delete($job);
             fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Retrying Job Deleted on retry '.$jobStats->releases.'!') . "\n", [Console::FG_RED]));
         } else {
