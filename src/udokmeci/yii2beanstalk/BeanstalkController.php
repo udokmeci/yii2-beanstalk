@@ -10,12 +10,14 @@ class BeanstalkController extends Controller
     const BURY = "bury";
     const DELETE = "delete";
     const DELAY = "delay";
+    const DELAY_EXPONENTIAL = "delay_exponential";
     const DECAY = "decay";
     const RELEASE = "release";
     const NO_ACTION = "noAction";
     const DELAY_PIRORITY = "1000";
     const DELAY_TIME = 5;
     const DELAY_MAX = 3;
+    const DELAY_RETRIES = 15;
 
     private $_lasttimereconnect = null;
     private $_inProgress = false;
@@ -26,6 +28,7 @@ class BeanstalkController extends Controller
      * Collection of tube name and action method name key value pair
      */
     private $tubeActions = [];
+
     /**
      * Controller specific tubes to listen if they do not exists.
      * @return array Collection of tube names to listen.
@@ -35,10 +38,11 @@ class BeanstalkController extends Controller
         return [];
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
     public function init()
     {
-
         try {
             if (!isset(Yii::$app->getI18n()->translations['udokmeci.beanstalkd'])) {
                 Yii::$app->getI18n()->translations['udokmeci.beanstalkd'] = [
@@ -93,9 +97,11 @@ class BeanstalkController extends Controller
         } catch (\Exception $e) {
             Yii::error(Yii::t('udokmeci.beanstalkd', "DB wait timeout did not succeeded."));
         }
-
     }
 
+    /**
+     *
+     */
     public function mysqlSessionTimeout()
     {
         try {
@@ -106,6 +112,11 @@ class BeanstalkController extends Controller
         }
     }
 
+    /**
+     * Decay a job with a fixed delay
+     *
+     * @param $job
+     */
     public function decayJob($job)
     {
         $jobStats = Yii::$app->beanstalk->statsJob($job);
@@ -118,6 +129,26 @@ class BeanstalkController extends Controller
         }
     }
 
+    /**
+     * Retry a job using exponential back off delay strategy
+     *
+     * @param $job
+     */
+    public function retryJobExponential($job)
+    {
+        $jobStats = Yii::$app->beanstalk->statsJob($job);
+
+        if ( $jobStats->releases == static::$DELAY_RETRIES) {
+            Yii::$app->beanstalk->delete($job);
+            fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Retrying Job Deleted on retry '.$jobStats->releases.'!') . "\n", [Console::FG_RED]));
+        } else {
+            Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, (1 << $jobStats->releases) * 1 + rand(0, 1));
+        }
+    }
+
+    /**
+     * @return bool|void
+     */
     public function registerSignalHandler()
     {
         if (!extension_loaded('pcntl')) {
@@ -131,6 +162,11 @@ class BeanstalkController extends Controller
         return true;
     }
 
+    /**
+     * @param $signal
+     *
+     * @return bool|void
+     */
     public function signalHandler($signal)
     {
         fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "Received signal {signal}.", ['signal' => $signal]) . "\n", [Console::FG_YELLOW]));
@@ -142,7 +178,6 @@ class BeanstalkController extends Controller
                 if (!$this->_inProgress) {
                     return $this->end();
                 }
-
                 $this->terminate();
                 break;
             default:
@@ -150,22 +185,41 @@ class BeanstalkController extends Controller
         }
     }
 
-    public function terminate(){
-    	$this->_willTerminate = true;
+    /**
+     * Terminate job
+     */
+    public function terminate() {
+        $this->_willTerminate = true;
     }
-    public function setTestMode(){
-    	return $this->_test=true;
-    }
-
-    public function end(){
-    	if($this->_test)
-    		return false;
-    	return Yii::$app->end();
-    }
-
 
     /**
-     * @param $action
+     * Start test mode
+     *
+     * @return bool
+     */
+    public function setTestMode() {
+        return $this->_test=true;
+    }
+
+    /**
+     * End job
+     *
+     * @return bool|void
+     * @throws \yii\base\ExitException
+     */
+    public function end() {
+        if($this->_test)
+            return false;
+        return Yii::$app->end();
+    }
+
+    /**
+     * Setup job before action
+     *
+     * @param \yii\base\Action $action
+     *
+     * @return bool|void
+     * @throws \yii\base\InvalidConfigException
      */
     public function beforeAction($action)
     {
@@ -222,38 +276,7 @@ class BeanstalkController extends Controller
                             break;
                         }
                         $this->_inProgress = true;
-                        switch (call_user_func_array(
-                            [
-                                        $this, $methodName,
-
-                                    ],
-                            [
-                                        "job" => $job,
-                                    ]
-                        )
-                            ) {
-                            case self::NO_ACTION:
-                                break;
-                            case self::RELEASE:
-                                Yii::$app->beanstalk->release($job);
-                                break;
-                            case self::BURY:
-                                Yii::$app->beanstalk->delete($job);
-                                break;
-                            case self::DECAY:
-                                $this->decayJob($job);
-                                break;
-                            case self::DELETE:
-                                Yii::$app->beanstalk->delete($job);
-                                break;
-                            case self::DELAY:
-                                Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
-                                break;
-
-                            default:
-                                Yii::$app->beanstalk->bury($job);
-                                break;
-                        }
+                        $this->executeJob($methodName, $job);
 
                     } catch (Yii\db\Exception $e) {
                         $this->decayJob($job);
@@ -272,6 +295,44 @@ class BeanstalkController extends Controller
                 fwrite(STDERR, Console::ansiFormat($e . "\n", [Console::FG_RED]));
             }
             return $this->end();
+        }
+    }
+
+    /**
+     * Execute job and handle outcome
+     *
+     * @param $methodName
+     * @param $job
+     */
+    protected function executeJob($methodName, $job) {
+        switch (call_user_func_array(
+	            [ $this, $methodName ],
+                [ "job" => $job ]
+            )
+        ) {
+            case self::NO_ACTION:
+                break;
+            case self::RELEASE:
+                Yii::$app->beanstalk->release($job);
+                break;
+            case self::BURY:
+                Yii::$app->beanstalk->delete($job);
+                break;
+            case self::DECAY:
+                $this->decayJob($job);
+                break;
+            case self::DELETE:
+                Yii::$app->beanstalk->delete($job);
+                break;
+            case self::DELAY:
+                Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
+                break;
+            case self::DELAY_EXPONENTIAL:
+                $this->retryJobExponential($job);
+                break;
+            default:
+                Yii::$app->beanstalk->bury($job);
+                break;
         }
     }
 }
