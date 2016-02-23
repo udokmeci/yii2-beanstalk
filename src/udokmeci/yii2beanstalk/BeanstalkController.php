@@ -14,7 +14,7 @@ class BeanstalkController extends Controller
     const DECAY = "decay";
     const RELEASE = "release";
     const NO_ACTION = "noAction";
-    const DELAY_PIRORITY = "1000";
+    const DELAY_PRIORITY = "1000";
     const DELAY_TIME = 5;
     const DELAY_MAX = 3;
     const DELAY_RETRIES = 15;
@@ -130,7 +130,7 @@ class BeanstalkController extends Controller
             Yii::$app->beanstalk->delete($job);
             fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]));
         } else {
-            Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, $delay_job);
+            Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, $delay_job);
         }
     }
 
@@ -147,7 +147,7 @@ class BeanstalkController extends Controller
             Yii::$app->beanstalk->delete($job);
             fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Retrying Job Deleted on retry '.$jobStats->releases.'!') . "\n", [Console::FG_RED]));
         } else {
-            Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, (1 << $jobStats->releases) * 1 + rand(0, 1));
+            Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, (1 << $jobStats->releases) * 1 + rand(0, 1));
         }
     }
 
@@ -330,7 +330,7 @@ class BeanstalkController extends Controller
                 Yii::$app->beanstalk->delete($job);
                 break;
             case self::DELAY:
-                Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
+                Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, static::DELAY_TIME);
                 break;
             case self::DELAY_EXPONENTIAL:
                 $this->retryJobExponential($job);

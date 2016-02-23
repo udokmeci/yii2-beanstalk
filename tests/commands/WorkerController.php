@@ -35,7 +35,7 @@ class WorkerController extends BeanstalkController
                   Yii::$app->beanstalk->delete($job);
                   break;
               case static::DELAY:
-                  Yii::$app->beanstalk->release($job, static::DELAY_PIRORITY, static::DELAY_TIME);
+                  Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, static::DELAY_TIME);
                   break;
         }
 
