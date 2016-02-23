@@ -321,7 +321,7 @@ class BeanstalkController extends Controller
                 Yii::$app->beanstalk->release($job);
                 break;
             case self::BURY:
-                Yii::$app->beanstalk->delete($job);
+                Yii::$app->beanstalk->bury($job);
                 break;
             case self::DECAY:
                 $this->decayJob($job);
