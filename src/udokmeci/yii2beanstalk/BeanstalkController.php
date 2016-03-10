@@ -150,7 +150,7 @@ class BeanstalkController extends Controller
         }
     }
 
-    /**-
+    /**
      * Retry a job using exponential back off delay strategy
      *
      * @param $job
