@@ -4,6 +4,7 @@ namespace udokmeci\yii2beanstalk;
 use Pheanstalk\Exception\ConnectionException;
 use Pheanstalk\Exception\ServerException;
 use Yii;
+use yii\base\Event;
 use yii\console\Controller;
 use yii\helpers\Console;
 
@@ -30,6 +31,10 @@ class BeanstalkController extends Controller
     const DELAY_MAX = 3;
 
     const DELAY_RETRIES = 15;
+
+    const EVENT_BEFORE_JOB = 'beforeJob';
+
+    const EVENT_AFTER_JOB = 'afterJob';
 
     private $_lasttimereconnect = null;
     private $_inProgress = false;
@@ -145,7 +150,7 @@ class BeanstalkController extends Controller
         }
     }
 
-    /**
+    /**-
      * Retry a job using exponential back off delay strategy
      *
      * @param $job
@@ -345,6 +350,8 @@ class BeanstalkController extends Controller
      */
     protected function executeJob($methodName, $job)
     {
+        $this->trigger(self::EVENT_BEFORE_JOB, new Event);
+
         switch (call_user_func_array(
             [$this, $methodName],
             ["job" => $job]
@@ -374,5 +381,7 @@ class BeanstalkController extends Controller
                 Yii::$app->beanstalk->bury($job);
                 break;
         }
+
+        $this->trigger(self::EVENT_AFTER_JOB, new Event);
     }
 }
