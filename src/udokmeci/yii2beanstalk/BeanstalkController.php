@@ -4,6 +4,7 @@ namespace udokmeci\yii2beanstalk;
 use Pheanstalk\Exception\ConnectionException;
 use Pheanstalk\Exception\ServerException;
 use Yii;
+use yii\base\Event;
 use yii\console\Controller;
 use yii\helpers\Console;
 
@@ -30,6 +31,10 @@ class BeanstalkController extends Controller
     const DELAY_MAX = 3;
 
     const DELAY_RETRIES = 15;
+
+    const EVENT_BEFORE_JOB = 'beforeJob';
+
+    const EVENT_AFTER_JOB = 'afterJob';
 
     private $_lasttimereconnect = null;
     private $_inProgress = false;
@@ -309,6 +314,7 @@ class BeanstalkController extends Controller
                                 break;
                             }
                             $this->_inProgress = true;
+                            $this->trigger(self::EVENT_BEFORE_JOB, new Event);
                             $this->executeJob($methodName, $job);
                         } catch (Yii\db\Exception $e) {
                             if (isset($job)) {
@@ -322,12 +328,14 @@ class BeanstalkController extends Controller
                             fwrite(STDERR, Console::ansiFormat($e->getMessage() . "\n", [Console::FG_RED]));
                         }
                         $this->_inProgress = false;
+                        $this->trigger(self::EVENT_AFTER_JOB, new Event);
                         if (Yii::$app->beanstalk->sleep) {
                             usleep(Yii::$app->beanstalk->sleep);
                         }
                     }
                 }
             } catch (ServerException $e) {
+                $this->trigger(self::EVENT_AFTER_JOB, new Event);
                 fwrite(STDERR, Console::ansiFormat($e . "\n", [Console::FG_RED]));
             }
 
@@ -374,5 +382,6 @@ class BeanstalkController extends Controller
                 Yii::$app->beanstalk->bury($job);
                 break;
         }
+
     }
 }
