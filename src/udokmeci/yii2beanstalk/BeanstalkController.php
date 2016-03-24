@@ -164,7 +164,11 @@ class BeanstalkController extends Controller
             fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
                     'Retrying Job Deleted on retry ' . $jobStats->releases . '!') . "\n", [Console::FG_RED]));
         } else {
-            Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, (1 << $jobStats->releases) * 1 + rand(0, 1));
+            Yii::$app->beanstalk->release(
+                $job, 
+                static::DELAY_PRIORITY, 
+                intval( static::DELAY_TIME << $jobStats->releases + static::DELAY_TIME * rand(0, 1) ) 
+            );
         }
     }
 
