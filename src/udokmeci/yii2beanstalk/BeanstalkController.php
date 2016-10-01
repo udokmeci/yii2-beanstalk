@@ -46,6 +46,17 @@ class BeanstalkController extends Controller
     private $tubeActions = [];
 
     /**
+     * Returns the Beanstalk component.  Overriding this method allows you to use a component
+     * with a name other than "beanstalk".
+     *
+     * @return Beanstalk
+     */
+    protected function getBeanstalk()
+    {
+        return Yii::$app->beanstalk;
+    }
+
+    /**
      * Controller specific tubes to listen if they do not exists.
      * @return array Collection of tube names to listen.
      */
@@ -95,7 +106,7 @@ class BeanstalkController extends Controller
      */
     public function getTubes()
     {
-        return array_unique(array_merge((array)Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
+        return array_unique(array_merge((array)$this->getBeanstalk()->listTubes(), $this->listenTubes()));
     }
 
     public function getDb()
@@ -139,14 +150,14 @@ class BeanstalkController extends Controller
      */
     public function decayJob($job)
     {
-        $jobStats = Yii::$app->beanstalk->statsJob($job);
+        $jobStats = $this->getBeanstalk()->statsJob($job);
         $delay_job = $jobStats->releases + $jobStats->delay + static::DELAY_TIME;
         if ($jobStats->releases >= static::DELAY_MAX) {
-            Yii::$app->beanstalk->delete($job);
+            $this->getBeanstalk()->delete($job);
             fwrite(STDERR,
                 Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]));
         } else {
-            Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, $delay_job);
+            $this->getBeanstalk()->release($job, static::DELAY_PRIORITY, $delay_job);
         }
     }
 
@@ -157,14 +168,14 @@ class BeanstalkController extends Controller
      */
     public function retryJobExponential($job)
     {
-        $jobStats = Yii::$app->beanstalk->statsJob($job);
+        $jobStats = $this->getBeanstalk()->statsJob($job);
 
         if ($jobStats->releases == static::DELAY_RETRIES) {
-            Yii::$app->beanstalk->delete($job);
+            $this->getBeanstalk()->delete($job);
             fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
                     'Retrying Job Deleted on retry ' . $jobStats->releases . '!') . "\n", [Console::FG_RED]));
         } else {
-            Yii::$app->beanstalk->release(
+            $this->getBeanstalk()->release(
                 $job, 
                 static::DELAY_PRIORITY, 
                 intval( static::DELAY_TIME << $jobStats->releases + static::DELAY_TIME * rand(0, 1) ) 
@@ -270,7 +281,7 @@ class BeanstalkController extends Controller
                         $this->tubeActions[$tube] = $methodName;
                         fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "Listening {tube} tube.",
                                 ["tube" => $tube]) . "\n", [Console::FG_GREEN]));
-                        $bean = Yii::$app->beanstalk->watch($tube);
+                        $bean = $this->getBeanstalk()->watch($tube);
                         if (!$bean) {
                             fwrite(STDERR, Console::ansiFormat("Check beanstalkd!" . "\n", [Console::FG_RED]));
                             return $this->end(Controller::EXIT_CODE_ERROR);
@@ -333,8 +344,8 @@ class BeanstalkController extends Controller
                         }
                         $this->_inProgress = false;
                         $this->trigger(self::EVENT_AFTER_JOB, new Event);
-                        if (Yii::$app->beanstalk->sleep) {
-                            usleep(Yii::$app->beanstalk->sleep);
+                        if ($this->getBeanstalk()->sleep) {
+                            usleep($this->getBeanstalk()->sleep);
                         }
                     }
                 }
@@ -365,25 +376,25 @@ class BeanstalkController extends Controller
             case self::NO_ACTION:
                 break;
             case self::RELEASE:
-                Yii::$app->beanstalk->release($job);
+                $this->getBeanstalk()->release($job);
                 break;
             case self::BURY:
-                Yii::$app->beanstalk->bury($job);
+                $this->getBeanstalk()->bury($job);
                 break;
             case self::DECAY:
                 $this->decayJob($job);
                 break;
             case self::DELETE:
-                Yii::$app->beanstalk->delete($job);
+                $this->getBeanstalk()->delete($job);
                 break;
             case self::DELAY:
-                Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, static::DELAY_TIME);
+                $this->getBeanstalk()->release($job, static::DELAY_PRIORITY, static::DELAY_TIME);
                 break;
             case self::DELAY_EXPONENTIAL:
                 $this->retryJobExponential($job);
                 break;
             default:
-                Yii::$app->beanstalk->bury($job);
+                $this->getBeanstalk()->bury($job);
                 break;
         }
 
