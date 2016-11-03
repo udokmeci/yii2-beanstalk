@@ -51,7 +51,7 @@ class BeanstalkController extends Controller
      *
      * @return Beanstalk
      */
-    protected function getBeanstalk()
+    public function getBeanstalk()
     {
         return Yii::$app->beanstalk;
     }
@@ -263,6 +263,24 @@ class BeanstalkController extends Controller
     }
 
     /**
+     * Determines if the given action exists (basically the same as @see createAction(), but without
+     * actually creating it.
+     *
+     * @param strign $id action ID
+     * @return boolean whether or not the action exists
+     */
+    protected function hasAction($id)
+    {
+        $actionMap = $this->actions();
+        if (isset($actionMap[$id])) {
+            return true; 
+        } 
+        
+        $methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $id))));
+        return method_exists($this, $methodName);
+    }
+
+    /**
      * Setup job before action
      *
      * @param \yii\base\Action $action
@@ -275,10 +293,10 @@ class BeanstalkController extends Controller
         if ($action->id == "index") {
             try {
                 $this->registerSignalHandler();
-                foreach ($this->getTubes() as $key => $tube) {
-                    $methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $tube))));
-                    if ($this->hasMethod($methodName)) {
-                        $this->tubeActions[$tube] = $methodName;
+                foreach ($this->getTubes() as $tube) {
+                    $actionName = $tube; 
+                    if ($this->hasAction($actionName)) {
+                        $this->tubeActions[$tube] = $actionName;
                         fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "Listening {tube} tube.",
                                 ["tube" => $tube]) . "\n", [Console::FG_GREEN]));
                         $bean = $this->getBeanstalk()->watch($tube);
@@ -289,7 +307,7 @@ class BeanstalkController extends Controller
                     } else {
                         fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
                                 "Not Listening {tube} tube since there is no action defined. {methodName}",
-                                ["tube" => $tube, "methodName" => $methodName]) . "\n", [Console::FG_YELLOW]));
+                                ["tube" => $tube, "methodName" => $actionName]) . "\n", [Console::FG_YELLOW]));
                     }
                 }
 
@@ -321,16 +339,16 @@ class BeanstalkController extends Controller
                             }
 
                             $jobStats = $bean->statsJob($job);
-                            $methodName = $this->getTubeAction($jobStats);
+                            $actionName = $this->getTubeAction($jobStats);
 
-                            if (!$methodName) {
+                            if (!$actionName) {
                                 fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
                                         "No method found for job's tube!") . "\n", [Console::FG_RED]));
                                 break;
                             }
                             $this->_inProgress = true;
                             $this->trigger(self::EVENT_BEFORE_JOB, new Event);
-                            $this->executeJob($methodName, $job);
+                            $this->executeJob($actionName, $job);
                         } catch (Yii\db\Exception $e) {
                             if (isset($job)) {
                                 $this->decayJob($job);
@@ -363,16 +381,13 @@ class BeanstalkController extends Controller
     /**
      * Execute job and handle outcome
      *
-     * @param $methodName
-     * @param $job
+     * @param string $actionName name of the action to run for the job
+     * @param Job $job job to run
      */
-    protected function executeJob($methodName, $job)
+    protected function executeJob($actionName, $job)
     {
-        switch (call_user_func_array(
-            [$this, $methodName],
-            ["job" => $job]
-        )
-        ) {
+        $action = $this->createAction($actionName);
+        switch ($action->runWithParams(['job' => $job])) {
             case self::NO_ACTION:
                 break;
             case self::RELEASE:
@@ -398,5 +413,6 @@ class BeanstalkController extends Controller
                 break;
         }
 
+        Yii::getLogger()->flush();
     }
 }
