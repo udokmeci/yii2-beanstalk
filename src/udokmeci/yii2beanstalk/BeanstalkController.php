@@ -155,7 +155,7 @@ class BeanstalkController extends Controller
         $delay_job = $jobStats->releases + $jobStats->delay + static::DELAY_TIME;
         if ($jobStats->releases >= static::DELAY_MAX) {
             $this->beanstalk->delete($job);
-            $this->stderr(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]);
+            $this->stderr(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", Console::FG_RED);
         } else {
             $this->beanstalk->release($job, static::DELAY_PRIORITY, $delay_job);
         }
@@ -173,12 +173,12 @@ class BeanstalkController extends Controller
         if ($jobStats->releases == static::DELAY_RETRIES) {
             $this->beanstalk->delete($job);
             $this->stderr(Yii::t('udokmeci.beanstalkd',
-                    'Retrying Job Deleted on retry ' . $jobStats->releases . '!') . "\n", [Console::FG_RED]);
+                    'Retrying Job Deleted on retry ' . $jobStats->releases . '!') . "\n", Console::FG_RED);
         } else {
             $this->beanstalk->release(
-                $job, 
-                static::DELAY_PRIORITY, 
-                intval( static::DELAY_TIME << $jobStats->releases + static::DELAY_TIME * rand(0, 1) ) 
+                $job,
+                static::DELAY_PRIORITY,
+                intval( static::DELAY_TIME << $jobStats->releases + static::DELAY_TIME * rand(0, 1) )
             );
         }
     }
@@ -191,14 +191,14 @@ class BeanstalkController extends Controller
         if (!extension_loaded('pcntl')) {
             $this->stdout(Yii::t('udokmeci.beanstalkd',
                     "Warning: Process Control Extension is not loaded. Signal Handling Disabled! If process is interrupted, the reserved jobs will be hung. You may lose the job data.") . "\n",
-                [Console::FG_YELLOW]);
+                Console::FG_YELLOW);
             return null;
         }
         declare (ticks = 1);
         pcntl_signal(SIGTERM, [$this, 'signalHandler']);
         pcntl_signal(SIGINT, [$this, 'signalHandler']);
         $this->stdout(Yii::t('udokmeci.beanstalkd',
-                "Process Control Extension is loaded. Signal Handling Registered!") . "\n", [Console::FG_GREEN]);
+                "Process Control Extension is loaded. Signal Handling Registered!") . "\n", Console::FG_GREEN);
         return true;
     }
 
@@ -210,12 +210,12 @@ class BeanstalkController extends Controller
     public function signalHandler($signal)
     {
         $this->stdout(Yii::t('udokmeci.beanstalkd', "Received signal {signal}.",
-                ['signal' => $signal]) . "\n", [Console::FG_YELLOW]);
+                ['signal' => $signal]) . "\n", Console::FG_YELLOW);
 
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
-                $this->stdout(Yii::t('udokmeci.beanstalkd', "Exiting") . "...\n", [Console::FG_RED]);
+                $this->stdout(Yii::t('udokmeci.beanstalkd', "Exiting") . "...\n", Console::FG_RED);
                 if (!$this->_inProgress) {
                     return $this->end();
                 }
@@ -279,21 +279,21 @@ class BeanstalkController extends Controller
                     if ($this->hasMethod($methodName)) {
                         $this->tubeActions[$tube] = $methodName;
                         $this->stdout(Yii::t('udokmeci.beanstalkd', "Listening {tube} tube.",
-                                ["tube" => $tube]) . "\n", [Console::FG_GREEN]);
+                                ["tube" => $tube]) . "\n", Console::FG_GREEN);
                         $bean = $this->beanstalk->watch($tube);
                         if (!$bean) {
-                            $this->stderr("Check beanstalkd!" . "\n", [Console::FG_RED]);
+                            $this->stderr("Check beanstalkd!" . "\n", Console::FG_RED);
                         }
                     } else {
                         $this->stdout(Yii::t('udokmeci.beanstalkd',
                                 "Not Listening {tube} tube since there is no action defined. {methodName}",
-                                ["tube" => $tube, "methodName" => $methodName]) . "\n", [Console::FG_YELLOW]);
+                                ["tube" => $tube, "methodName" => $methodName]) . "\n", Console::FG_YELLOW);
                     }
                 }
 
                 if (count($this->tubeActions) == 0) {
                     $this->stderr(Yii::t('udokmeci.beanstalkd', "No tube found to listen!") . "\n",
-                        [Console::FG_RED]);
+                        Console::FG_RED);
                     return $this->end(Controller::EXIT_CODE_ERROR);
                 }
 
@@ -323,7 +323,7 @@ class BeanstalkController extends Controller
 
                             if (!$methodName) {
                                 $this->stderr(Yii::t('udokmeci.beanstalkd',
-                                        "No method found for job's tube!") . "\n", [Console::FG_RED]);
+                                        "No method found for job's tube!") . "\n", Console::FG_RED);
                                 break;
                             }
                             $this->_inProgress = true;
@@ -333,11 +333,11 @@ class BeanstalkController extends Controller
                             if (isset($job)) {
                                 $this->decayJob($job);
                             }
-                            $this->stderr($e->getMessage() . "\n", [Console::FG_RED]);
+                            $this->stderr($e->getMessage() . "\n", Console::FG_RED);
                             $this->stderr(Yii::t('udokmeci.beanstalkd', 'DB Error job is decaying.') . "\n",
-                                [Console::FG_RED]);
+                                Console::FG_RED);
                         } catch (Yii\base\ErrorException $e) {
-                            $this->stderr($e->getMessage() . "\n", [Console::FG_RED]);
+                            $this->stderr($e->getMessage() . "\n", Console::FG_RED);
                         }
                         $this->_inProgress = false;
                         $this->trigger(self::EVENT_AFTER_JOB, new Event);
@@ -348,7 +348,7 @@ class BeanstalkController extends Controller
                 }
             } catch (ServerException $e) {
                 $this->trigger(self::EVENT_AFTER_JOB, new Event);
-                $this->stderr($e . "\n", [Console::FG_RED]);
+                $this->stderr($e . "\n", Console::FG_RED);
             }
 
             return $this->end(Controller::EXIT_CODE_NORMAL);
