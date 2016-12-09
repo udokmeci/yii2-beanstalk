@@ -7,13 +7,10 @@ before_script:
   - make
   - "./beanstalkd &"
   - "cd $TRAVIS_BUILD_DIR"
-  - flags="--prefer-dist"
-  - "composer install $flags"
-  - "bin/composer install $flags"
 install: 
   - "composer self-update --stable"
   - "composer global require \"fxp/composer-asset-plugin:~1.1.1\""
-  - "composer install"
+  - "COMPOSER_ROOT_VERSION=dev-master composer install"
 language: php
 php: 
   - 5.5
