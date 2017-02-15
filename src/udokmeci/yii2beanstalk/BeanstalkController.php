@@ -5,6 +5,7 @@ use Pheanstalk\Exception\ConnectionException;
 use Pheanstalk\Exception\ServerException;
 use Yii;
 use yii\base\Event;
+use yii\base\InvalidConfigException;
 use yii\console\Controller;
 use yii\helpers\Console;
 
@@ -36,6 +37,11 @@ class BeanstalkController extends Controller
 
     const EVENT_AFTER_JOB = 'afterJob';
 
+    /**
+     * @var Beanstalk|string
+     */
+    public $beanstalk = 'beanstalk';
+
     private $_lasttimereconnect = null;
     private $_inProgress = false;
     private $_willTerminate = false;
@@ -59,6 +65,12 @@ class BeanstalkController extends Controller
      */
     public function init()
     {
+        if (is_string($this->beanstalk)) {
+            $this->beanstalk = Yii::$app->get($this->beanstalk);
+        }
+        if (!$this->beanstalk instanceof Beanstalk) {
+            throw new InvalidConfigException("Controller beanstalk must extend from \\udokmeci\\yii2beanstalk\\Beanstalk.");
+        }
         try {
             if (!isset(Yii::$app->getI18n()->translations['udokmeci.beanstalkd'])) {
                 Yii::$app->getI18n()->translations['udokmeci.beanstalkd'] = [
@@ -95,7 +107,7 @@ class BeanstalkController extends Controller
      */
     public function getTubes()
     {
-        return array_unique(array_merge((array)Yii::$app->beanstalk->listTubes(), $this->listenTubes()));
+        return array_unique(array_merge((array)$this->beanstalk->listTubes(), $this->listenTubes()));
     }
 
     public function getDb()
@@ -139,14 +151,13 @@ class BeanstalkController extends Controller
      */
     public function decayJob($job)
     {
-        $jobStats = Yii::$app->beanstalk->statsJob($job);
+        $jobStats = $this->beanstalk->statsJob($job);
         $delay_job = $jobStats->releases + $jobStats->delay + static::DELAY_TIME;
         if ($jobStats->releases >= static::DELAY_MAX) {
-            Yii::$app->beanstalk->delete($job);
-            fwrite(STDERR,
-                Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", [Console::FG_RED]));
+            $this->beanstalk->delete($job);
+            $this->stderr(Yii::t('udokmeci.beanstalkd', 'Decaying Job Deleted!') . "\n", Console::FG_RED);
         } else {
-            Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, $delay_job);
+            $this->beanstalk->release($job, static::DELAY_PRIORITY, $delay_job);
         }
     }
 
@@ -157,55 +168,54 @@ class BeanstalkController extends Controller
      */
     public function retryJobExponential($job)
     {
-        $jobStats = Yii::$app->beanstalk->statsJob($job);
+        $jobStats = $this->beanstalk->statsJob($job);
 
         if ($jobStats->releases == static::DELAY_RETRIES) {
-            Yii::$app->beanstalk->delete($job);
-            fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
-                    'Retrying Job Deleted on retry ' . $jobStats->releases . '!') . "\n", [Console::FG_RED]));
+            $this->beanstalk->delete($job);
+            $this->stderr(Yii::t('udokmeci.beanstalkd',
+                    'Retrying Job Deleted on retry ' . $jobStats->releases . '!') . "\n", Console::FG_RED);
         } else {
-            Yii::$app->beanstalk->release(
-                $job, 
-                static::DELAY_PRIORITY, 
-                intval( static::DELAY_TIME << $jobStats->releases + static::DELAY_TIME * rand(0, 1) ) 
+            $this->beanstalk->release(
+                $job,
+                static::DELAY_PRIORITY,
+                intval( static::DELAY_TIME << $jobStats->releases + static::DELAY_TIME * rand(0, 1) )
             );
         }
     }
 
     /**
-     * @return bool|void
+     * @return bool
      */
     public function registerSignalHandler()
     {
         if (!extension_loaded('pcntl')) {
-            fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
+            $this->stdout(Yii::t('udokmeci.beanstalkd',
                     "Warning: Process Control Extension is not loaded. Signal Handling Disabled! If process is interrupted, the reserved jobs will be hung. You may lose the job data.") . "\n",
-                [Console::FG_YELLOW]));
+                Console::FG_YELLOW);
             return null;
         }
         declare (ticks = 1);
         pcntl_signal(SIGTERM, [$this, 'signalHandler']);
         pcntl_signal(SIGINT, [$this, 'signalHandler']);
-        fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
-                "Process Control Extension is loaded. Signal Handling Registered!") . "\n", [Console::FG_GREEN]));
+        $this->stdout(Yii::t('udokmeci.beanstalkd',
+                "Process Control Extension is loaded. Signal Handling Registered!") . "\n", Console::FG_GREEN);
         return true;
     }
 
     /**
      * @param $signal
      *
-     * @return bool|void
+     * @return bool
      */
     public function signalHandler($signal)
     {
-        fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "Received signal {signal}.",
-                ['signal' => $signal]) . "\n", [Console::FG_YELLOW]));
+        $this->stdout(Yii::t('udokmeci.beanstalkd', "Received signal {signal}.",
+                ['signal' => $signal]) . "\n", Console::FG_YELLOW);
 
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
-                fwrite(STDOUT,
-                    Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "Exiting") . "...\n", [Console::FG_RED]));
+                $this->stdout(Yii::t('udokmeci.beanstalkd', "Exiting") . "...\n", Console::FG_RED);
                 if (!$this->_inProgress) {
                     return $this->end();
                 }
@@ -240,7 +250,7 @@ class BeanstalkController extends Controller
      * End job
      *
      * @param int $status
-     * @return bool|void
+     * @return bool
      * @throws \yii\base\ExitException
      */
     public function end($status = 0)
@@ -256,7 +266,7 @@ class BeanstalkController extends Controller
      *
      * @param \yii\base\Action $action
      *
-     * @return bool|void
+     * @return bool
      * @throws \yii\base\InvalidConfigException
      */
     public function beforeAction($action)
@@ -268,23 +278,22 @@ class BeanstalkController extends Controller
                     $methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $tube))));
                     if ($this->hasMethod($methodName)) {
                         $this->tubeActions[$tube] = $methodName;
-                        fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "Listening {tube} tube.",
-                                ["tube" => $tube]) . "\n", [Console::FG_GREEN]));
-                        $bean = Yii::$app->beanstalk->watch($tube);
+                        $this->stdout(Yii::t('udokmeci.beanstalkd', "Listening {tube} tube.",
+                                ["tube" => $tube]) . "\n", Console::FG_GREEN);
+                        $bean = $this->beanstalk->watch($tube);
                         if (!$bean) {
-                            fwrite(STDERR, Console::ansiFormat("Check beanstalkd!" . "\n", [Console::FG_RED]));
-                            return $this->end(Controller::EXIT_CODE_ERROR);
+                            $this->stderr("Check beanstalkd!" . "\n", Console::FG_RED);
                         }
                     } else {
-                        fwrite(STDOUT, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
+                        $this->stdout(Yii::t('udokmeci.beanstalkd',
                                 "Not Listening {tube} tube since there is no action defined. {methodName}",
-                                ["tube" => $tube, "methodName" => $methodName]) . "\n", [Console::FG_YELLOW]));
+                                ["tube" => $tube, "methodName" => $methodName]) . "\n", Console::FG_YELLOW);
                     }
                 }
 
                 if (count($this->tubeActions) == 0) {
-                    fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd', "No tube found to listen!") . "\n",
-                        [Console::FG_RED]));
+                    $this->stderr(Yii::t('udokmeci.beanstalkd', "No tube found to listen!") . "\n",
+                        Console::FG_RED);
                     return $this->end(Controller::EXIT_CODE_ERROR);
                 }
 
@@ -313,8 +322,8 @@ class BeanstalkController extends Controller
                             $methodName = $this->getTubeAction($jobStats);
 
                             if (!$methodName) {
-                                fwrite(STDERR, Console::ansiFormat(Yii::t('udokmeci.beanstalkd',
-                                        "No method found for job's tube!") . "\n", [Console::FG_RED]));
+                                $this->stderr(Yii::t('udokmeci.beanstalkd',
+                                        "No method found for job's tube!") . "\n", Console::FG_RED);
                                 break;
                             }
                             $this->_inProgress = true;
@@ -324,23 +333,22 @@ class BeanstalkController extends Controller
                             if (isset($job)) {
                                 $this->decayJob($job);
                             }
-                            fwrite(STDERR, Console::ansiFormat($e->getMessage() . "\n", [Console::FG_RED]));
-                            fwrite(STDERR,
-                                Console::ansiFormat(Yii::t('udokmeci.beanstalkd', 'DB Error job is decaying.') . "\n",
-                                    [Console::FG_RED]));
+                            $this->stderr($e->getMessage() . "\n", Console::FG_RED);
+                            $this->stderr(Yii::t('udokmeci.beanstalkd', 'DB Error job is decaying.') . "\n",
+                                Console::FG_RED);
                         } catch (Yii\base\ErrorException $e) {
-                            fwrite(STDERR, Console::ansiFormat($e->getMessage() . "\n", [Console::FG_RED]));
+                            $this->stderr($e->getMessage() . "\n", Console::FG_RED);
                         }
                         $this->_inProgress = false;
                         $this->trigger(self::EVENT_AFTER_JOB, new Event);
-                        if (Yii::$app->beanstalk->sleep) {
-                            usleep(Yii::$app->beanstalk->sleep);
+                        if ($this->beanstalk->sleep) {
+                            usleep($this->beanstalk->sleep);
                         }
                     }
                 }
             } catch (ServerException $e) {
                 $this->trigger(self::EVENT_AFTER_JOB, new Event);
-                fwrite(STDERR, Console::ansiFormat($e . "\n", [Console::FG_RED]));
+                $this->stderr($e . "\n", Console::FG_RED);
             }
 
             return $this->end(Controller::EXIT_CODE_NORMAL);
@@ -365,25 +373,25 @@ class BeanstalkController extends Controller
             case self::NO_ACTION:
                 break;
             case self::RELEASE:
-                Yii::$app->beanstalk->release($job);
+                $this->beanstalk->release($job);
                 break;
             case self::BURY:
-                Yii::$app->beanstalk->bury($job);
+                $this->beanstalk->bury($job);
                 break;
             case self::DECAY:
                 $this->decayJob($job);
                 break;
             case self::DELETE:
-                Yii::$app->beanstalk->delete($job);
+                $this->beanstalk->delete($job);
                 break;
             case self::DELAY:
-                Yii::$app->beanstalk->release($job, static::DELAY_PRIORITY, static::DELAY_TIME);
+                $this->beanstalk->release($job, static::DELAY_PRIORITY, static::DELAY_TIME);
                 break;
             case self::DELAY_EXPONENTIAL:
                 $this->retryJobExponential($job);
                 break;
             default:
-                Yii::$app->beanstalk->bury($job);
+                $this->beanstalk->bury($job);
                 break;
         }
 

@@ -18,8 +18,9 @@ use yii\base\Component;
  * @method Job reserve($timeout = null)
  * @method Response statsJob($job)
  * @method void bury($job, $priority = Pheanstalk::DEFAULT_PRIORITY)
- * @method Beanstalk release($job, $priority = Pheanstalk::DEFAULT_PRIORITY, $delay = Pheanstalk::DEFAULT_DELAY);
- * @method Beanstalk delete($job);
+ * @method Beanstalk release($job, $priority = Pheanstalk::DEFAULT_PRIORITY, $delay = Pheanstalk::DEFAULT_DELAY)
+ * @method Beanstalk delete($job)
+ * @method Beanstalk listTubes()
  */
 class Beanstalk extends Component
 {
