@@ -54,7 +54,7 @@ Now add following in to your `console` configuration only.
 ```
 
 ##Producing
-Now if everthing is fine. You can run ```beandstalkd```
+Now if everything is fine, you can run ```beandstalkd```
 and access to controller as 
 ``` php 
 \Yii::$app->beanstalk
@@ -110,13 +110,13 @@ class WorkerController extends BeanstalkController
 
 
 
-           if($everthingIsAllRight == true){
+           if($everythingIsAllRight == true){
                 fwrite(STDOUT, Console::ansiFormat("- Everything is allright"."\n", [Console::FG_GREEN]));
                 //Delete the job from beanstalkd
                 return self::DELETE; 
            }
 
-           if($everthingWillBeAllRight == true){
+           if($everythingWillBeAllRight == true){
                 fwrite(STDOUT, Console::ansiFormat("- Everything will be allright"."\n", [Console::FG_GREEN]));
                 //Delay the for later try
                 //You may prefer decay to avoid endless loop
