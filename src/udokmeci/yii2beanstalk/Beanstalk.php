@@ -1,11 +1,30 @@
 <?php
 namespace udokmeci\yii2beanstalk;
 
+use Pheanstalk\Exception\ConnectionException;
+use Pheanstalk\Job;
 use Pheanstalk\Pheanstalk;
+use Pheanstalk\PheanstalkInterface;
+use Pheanstalk\Response;
 use Yii;
+use yii\base\Component;
 
-class Beanstalk extends \yii\base\Component
+/**
+ * Class Beanstalk
+ * @package udokmeci\yii2beanstalk
+ *
+ * @method Beanstalk useTube($tube)
+ * @method Beanstalk watch($tube)
+ * @method Job reserve($timeout = null)
+ * @method Response statsJob($job)
+ * @method void bury($job, $priority = Pheanstalk::DEFAULT_PRIORITY)
+ * @method Beanstalk release($job, $priority = Pheanstalk::DEFAULT_PRIORITY, $delay = Pheanstalk::DEFAULT_DELAY)
+ * @method Beanstalk delete($job)
+ * @method Beanstalk listTubes()
+ */
+class Beanstalk extends Component
 {
+    /** @var  Pheanstalk */
     public $_beanstalk;
     public $host = "127.0.0.1";
     public $port = 11300;
@@ -17,8 +36,7 @@ class Beanstalk extends \yii\base\Component
     {
         try {
             $this->_beanstalk = new Pheanstalk($this->host, $this->port, $this->connectTimeout);
-            $connected = true;
-        } catch (\Pheanstalk\Exception\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             Yii::error($e);
         }
     }
@@ -34,9 +52,9 @@ class Beanstalk extends \yii\base\Component
      */
     public function put(
         $data,
-        $priority = \Pheanstalk\PheanstalkInterface::DEFAULT_PRIORITY,
-        $delay = \Pheanstalk\PheanstalkInterface::DEFAULT_DELAY,
-        $ttr = \Pheanstalk\PheanstalkInterface::DEFAULT_TTR
+        $priority = PheanstalkInterface::DEFAULT_PRIORITY,
+        $delay = PheanstalkInterface::DEFAULT_DELAY,
+        $ttr = PheanstalkInterface::DEFAULT_TTR
     )
     {
         try {
@@ -44,7 +62,7 @@ class Beanstalk extends \yii\base\Component
                 $data = json_encode($data);
             }
             return $this->_beanstalk->put($data, $priority, $delay, $ttr);
-        } catch (\Pheanstalk\Exception\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             Yii::error($e);
             return false;
         }
@@ -56,15 +74,15 @@ class Beanstalk extends \yii\base\Component
     public function putInTube(
         $tube,
         $data,
-        $priority = \Pheanstalk\PheanstalkInterface::DEFAULT_PRIORITY,
-        $delay = \Pheanstalk\PheanstalkInterface::DEFAULT_DELAY,
-        $ttr = \Pheanstalk\PheanstalkInterface::DEFAULT_TTR
+        $priority = PheanstalkInterface::DEFAULT_PRIORITY,
+        $delay = PheanstalkInterface::DEFAULT_DELAY,
+        $ttr = PheanstalkInterface::DEFAULT_TTR
     ) {
-    
+
         try {
             $this->_beanstalk->useTube($tube);
             return $this->put($data, $priority, $delay, $ttr);
-        } catch (\Pheanstalk\Exception\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             Yii::error($e);
             return false;
         }
@@ -77,19 +95,19 @@ class Beanstalk extends \yii\base\Component
             $result = call_user_func_array(array($this->_beanstalk, $method), $args);
 
             //Chaining.
-            if ($result instanceof \Pheanstalk\Pheanstalk) {
+            if ($result instanceof Pheanstalk) {
                 return $this;
             }
 
             //Check for json data.
-            if ($result instanceof \Pheanstalk\Job) {
+            if ($result instanceof Job) {
                 if ($this->isJson($result->getData())) {
-                    $result = new \Pheanstalk\Job($result->getId(), json_decode($result->getData()));
+                    $result = new Job($result->getId(), json_decode($result->getData()));
                 }
             }
             return $result;
 
-        } catch (\Pheanstalk\Exception\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             Yii::error($e);
             return false;
         }
