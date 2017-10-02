@@ -17,6 +17,7 @@ nbproject
 #eclipse, zend studio, aptana or other eclipse like project files
 .buildpath
 .project
+composer.lock
 .settings
 
 
