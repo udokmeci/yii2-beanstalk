@@ -317,6 +317,9 @@ class BeanstalkController extends Controller
 
                             $job = $bean->reserve(0);
                             if (!$job) {
+                                if ($this->beanstalk->sleep) {
+                                    usleep($this->beanstalk->sleep);
+                                }                                
                                 continue;
                             }
 
