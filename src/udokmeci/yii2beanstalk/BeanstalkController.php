@@ -315,7 +315,7 @@ class BeanstalkController extends Controller
                                 $this->_lasttimereconnect = time();
                             }
 
-                            $job = $bean->reserve();
+                            $job = $bean->reserve(1);
                             if (!$job) {
                                 if ($this->beanstalk->sleep) {
                                     usleep($this->beanstalk->sleep);
