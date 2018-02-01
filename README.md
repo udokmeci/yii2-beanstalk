@@ -10,7 +10,7 @@ Yii2 [beanstalkd][1] web and console component which is an interface on the top 
 
 How to use?
 ==============
-##Installation with Composer
+## Installation with Composer
 Just add the line under `require` object in your `composer.json` file.
 ``` json
 {
@@ -20,22 +20,22 @@ Just add the line under `require` object in your `composer.json` file.
   }
 }
 ```
-then run 
+Then run 
 
 ``` console
 $> composer update
 ```
 
-##Configuration
-Now add following lines in to your `main` and `console` configuration file under ```components``` 
+## Configuration
+Now add following lines in to your `main` and `console` configuration file under `components`
 ``` php
 'beanstalk'=>[
-            'class' => 'udokmeci\yii2beanstalk\Beanstalk',
-            'host'=> "127.0.0.1", // default host
-            'port'=>11300, //default port
-            'connectTimeout'=> 1,
-            'sleep' => false, // or int for usleep after every job 
-        ],
+    'class' => 'udokmeci\yii2beanstalk\Beanstalk',
+    'host' => '127.0.0.1', // default host
+    'port' => 11300, //default port
+    'connectTimeout' => 1,
+    'sleep' => false, // or int for usleep after every job 
+],
 ```
 
 Now add following in to your `console` configuration only.
@@ -45,30 +45,27 @@ Now add following in to your `console` configuration only.
 'params' => $params,
 // add you controller with name and class name next to params.
 'controllerMap' => [
-        'worker'=>[
-            'class' => 'app\commands\WorkerController',
-        ]
-       
-    ],
-
+    'worker' => [
+        'class' => 'app\commands\WorkerController',
+    ]
+],
 ```
 
-##Producing
-Now if everything is fine, you can run ```beandstalkd```
-and access to controller as 
+## Producing
+Now if everything is fine, you can run `beandstalkd` and access to controller as 
 ``` php 
 \Yii::$app->beanstalk
-        ->putInTube('tube', $mixedData ,$priority,$delay);
-
+    ->putInTube('tube', $mixedData, $priority, $delay);
 ```
 `$mixedData` is added on v1.0 for complex usage. Anything else then `string` will be send as `json` format. So you can sent anything within it suppoted by `json`.
 
-##Worker
-for worker it also has a built in controller which runs an infinite loop and wait for new jobs. Most of the work is done in `BeanstalkController` . All you have to do is to create a controller and action like below.
+## Worker
+For worker it also has a built in controller which runs an infinite loop and wait for new jobs. Most of the work is done in `BeanstalkController`. All you have to do is to create a controller and action like below.
 
-###Controller
-Create an controller under your `commands` folder. Give the name anything you want to it and `extend` your controller from `udokmeci\yii2beanstalk\BeanstalkController`
-#####Example Controller
+### Controller
+Create a controller under your `commands` folder. Give the name anything you want to it and `extend` your controller from `udokmeci\yii2beanstalk\BeanstalkController`
+
+##### Example Controller
 
 ``` php
 <?php
@@ -93,16 +90,16 @@ class WorkerController extends BeanstalkController
   }
 
   /**
-    *
-    * @param Pheanstalk\Job $job
-    * @return string  self::BURY
-    *                 self::RELEASE
-    *                 self::DELAY
-    *                 self::DELETE
-    *                 self::NO_ACTION
-    *                 self::DECAY
-    *  
-    */
+   *
+   * @param Pheanstalk\Job $job
+   * @return string  self::BURY
+   *                 self::RELEASE
+   *                 self::DELAY
+   *                 self::DELETE
+   *                 self::NO_ACTION
+   *                 self::DECAY
+   *  
+   */
   public function actionTube($job){
 	    $sentData = $job->getData();
 	    try {
@@ -143,11 +140,11 @@ class WorkerController extends BeanstalkController
 }
 ```
 
-#####Running Worker
-Running console is the easiest part. Run ./yii Your ```controller```
+##### Running Worker
+Running console is the easiest part. Run ./yii Your `controller`
 ``` console
-php ./yii worker
+$> php ./yii worker
 ```
-Controller will tell you, wheater there are actions for correspanding tubes or beanstalk server is accessible and which tubes are listening currently. The controller handles with signals. So exit whenever you want, reserved job will not be hanged.
+Controller will tell you, whether there are actions for correspanding tubes or beanstalk server is accessible and which tubes are listening currently. The controller handles with signals. So exit whenever you want, reserved job will not be hanged.
 
 Any forks are welcome.
