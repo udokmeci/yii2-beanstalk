@@ -31,6 +31,7 @@ class Beanstalk extends Component
     public $connectTimeout = 1;
     public $connected = false;
     public $sleep = false;
+    public $reserveTimeout = 10;
 
     public function init()
     {
