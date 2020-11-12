@@ -9,7 +9,6 @@ before_script:
   - "cd $TRAVIS_BUILD_DIR"
 install: 
   - "composer self-update --stable"
-  - "composer global require \"fxp/composer-asset-plugin:~1.1.1\""
   - "COMPOSER_ROOT_VERSION=dev-master composer install"
 language: php
 php: 
