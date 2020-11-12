@@ -2,7 +2,7 @@ after_script:
   - "wget https://scrutinizer-ci.com/ocular.phar"
   - "php ocular.phar code-coverage:upload --format=php-clover coverage.clover"
 before_script: 
-  - "curl -L https://github.com/kr/beanstalkd/archive/v1.10.tar.gz | tar xz -C /tmp"
+  - "curl -L https://github.com/kr/beanstalkd/archive/v1.12.tar.gz | tar xz -C /tmp"
   - "cd /tmp/beanstalkd-1.10/"
   - make
   - "./beanstalkd &"
