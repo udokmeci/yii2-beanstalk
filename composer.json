@@ -19,7 +19,7 @@
     },
     "require": {
         "php": ">=5.5",
-        "yiisoft/yii2": "*",
+        "yiisoft/yii2": ">=2.0.38",
         "pda/pheanstalk": "3.*@dev"
     },
     "require-dev": {
