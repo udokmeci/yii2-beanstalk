@@ -2,6 +2,7 @@
 namespace udokmeci\yii2beanstalk;
 
 use Pheanstalk\Exception\ConnectionException;
+use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Job;
 use Pheanstalk\Pheanstalk;
 use Pheanstalk\PheanstalkInterface;
@@ -109,6 +110,9 @@ class Beanstalk extends Component
             return $result;
 
         } catch (ConnectionException $e) {
+            Yii::error($e);
+            return false;        
+        } catch (ServerException $e) {
             Yii::error($e);
             return false;
         }
